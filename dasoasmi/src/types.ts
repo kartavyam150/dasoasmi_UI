@@ -1,9 +1,9 @@
 export interface Shloka {
     id: string;
-    text: string;
-    translation: string;
+    shloka: string;
+    meaning: string;
     source: string;
-    author: string;
-    date: string; // ISO string
+    uvaca: string;
+    date: string;
     comment?: string;
 }

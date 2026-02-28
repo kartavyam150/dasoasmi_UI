@@ -27,14 +27,14 @@ export function ShlokaCard({ shloka, className }: ShlokaCardProps) {
 
             <blockquote className="mb-8 relative z-10 text-center">
                 <p className="text-2xl sm:text-3xl font-medium leading-relaxed italic font-semibold  font-serif drop-shadow-sm whitespace-pre-line">
-                    {shloka.text}
+                    {shloka.shloka}
                 </p>
             </blockquote>
             <p className="   font-sans leading-relaxed font-semibold opacity-90 text-center">@dasoasmi          </p>
 
             <div className="mb-8 space-y-3 relative z-10 text-center">
                 <p className="text-lg sm:text-xl text-black font-sans leading-relaxed font-semibold opacity-90">
-                    {shloka.translation}
+                    {shloka.meaning}
                 </p>
             </div>
 
@@ -48,7 +48,7 @@ export function ShlokaCard({ shloka, className }: ShlokaCardProps) {
             <div className="mt-auto flex flex-wrap items-center justify-center gap-6 text-sm sm:text-base font-bold text-black/80 uppercase tracking-widest relative z-10 border-t border-black/20 pt-6 w-full">
                 <span>{shloka.source}</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-black/50" />
-                <span>{shloka.author}</span>
+                <span>{shloka.uvaca}</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-black/50" />
                 <span>{new Date(shloka.date).toLocaleDateString()}</span>
             </div>

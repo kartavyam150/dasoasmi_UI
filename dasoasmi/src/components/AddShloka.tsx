@@ -10,29 +10,40 @@ interface AddShlokaProps {
 }
 
 export function AddShloka({ onSave, onCancel }: AddShlokaProps) {
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState<Partial<Shloka>>({
-        text: "",
-        translation: "",
+        shloka: "",
+        meaning: "",
         source: "",
-        author: "",
+        uvaca: "",
         comment: "",
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.text || !formData.translation) return;
+        if (!formData.shloka || isSaving) return;
 
+        setIsSaving(true);
         const newShloka: Shloka = {
-            id: crypto.randomUUID(),
+            id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11),
             date: new Date().toISOString(),
-            text: formData.text!,
-            translation: formData.translation!,
-            source: formData.source || "Unknown",
-            author: formData.author || "Unknown",
-            comment: formData.comment || undefined,
+            shloka: formData.shloka!,
+            meaning: formData.meaning || "",
+            source: formData.source || "",
+            uvaca: formData.uvaca || "",
+            comment: formData.comment || "",
         };
 
-        onSave(newShloka);
+        try {
+            setError(null);
+            await onSave(newShloka);
+        } catch (err) {
+            console.error("Submission error:", err);
+            setError(err instanceof Error ? err.message : "Failed to add shloka. Please check your connection.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -45,13 +56,19 @@ export function AddShloka({ onSave, onCancel }: AddShlokaProps) {
                     </Button>
                 </div>
 
+                {error && (
+                    <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 animate-in fade-in slide-in-from-top-1">
+                        {error}
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Shloka Text</label>
                         <Textarea
                             required
-                            value={formData.text}
-                            onChange={(e) => setFormData({ ...formData, text: e.target.value })}
+                            value={formData.shloka}
+                            onChange={(e) => setFormData({ ...formData, shloka: e.target.value })}
                             placeholder="Enter the Sanskrit text..."
                             className="font-serif text-lg bg-white/40 dark:bg-black/20 focus:bg-white/60"
                         />
@@ -60,10 +77,9 @@ export function AddShloka({ onSave, onCancel }: AddShlokaProps) {
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Translation</label>
                         <Textarea
-                            required
-                            value={formData.translation}
+                            value={formData.meaning}
                             onChange={(e) =>
-                                setFormData({ ...formData, translation: e.target.value })
+                                setFormData({ ...formData, meaning: e.target.value })
                             }
                             placeholder="Enter the meaning..."
                             className="bg-white/40 dark:bg-black/20 focus:bg-white/60"
@@ -85,9 +101,9 @@ export function AddShloka({ onSave, onCancel }: AddShlokaProps) {
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Author/Speaker</label>
                             <Input
-                                value={formData.author}
+                                value={formData.uvaca}
                                 onChange={(e) =>
-                                    setFormData({ ...formData, author: e.target.value })
+                                    setFormData({ ...formData, uvaca: e.target.value })
                                 }
                                 placeholder="e.g. Lord Krishna"
                                 className="bg-white/40 dark:bg-black/20 focus:bg-white/60"
@@ -108,11 +124,11 @@ export function AddShloka({ onSave, onCancel }: AddShlokaProps) {
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4">
-                        <Button type="button" variant="ghost" onClick={onCancel}>
+                        <Button type="button" variant="ghost" onClick={onCancel} disabled={isSaving}>
                             Cancel
                         </Button>
-                        <Button type="submit" variant="default">
-                            Add Shloka
+                        <Button type="submit" variant="default" disabled={isSaving}>
+                            {isSaving ? "Adding..." : "Add Shloka"}
                         </Button>
                     </div>
                 </form>

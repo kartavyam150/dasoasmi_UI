@@ -15,17 +15,48 @@ import type { Shloka } from './types';
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true);
   const [shlokas, setShlokas] = useState<Shloka[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    setShlokas(getShlokas());
+    const fetchShlokas = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getShlokas();
+        setShlokas(data);
+      } catch (error) {
+        console.error("Failed to fetch shlokas:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchShlokas();
   }, []);
 
-  const handleAddShloka = (newShloka: Shloka) => {
-    addShloka(newShloka);
-    setShlokas(getShlokas());
-    navigate('/');
+  const handleAddShloka = async (newShloka: Shloka) => {
+    // Check for duplicates
+    const isDuplicate = shlokas.some(
+      (s) => s.shloka.trim().toLowerCase() === newShloka.shloka.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      console.log("Comparison result: Duplicate found!");
+      console.log("Existing shlokas:", shlokas.map(s => s.shloka));
+      console.log("New shloka text:", newShloka.shloka);
+      alert("This shloka already exists in your collection!");
+      return;
+    }
+
+    try {
+      await addShloka(newShloka);
+      const data = await getShlokas();
+      setShlokas(data);
+      navigate('/');
+    } catch (error) {
+      console.error("Failed to add shloka:", error);
+      throw error; // Re-throw to allow AddShloka component to handle it
+    }
   };
 
   return (
@@ -69,8 +100,12 @@ function AppContent() {
         <main className="container mx-auto px-4 py-8">
           <Routes>
             <Route path="/" element={
-              shlokas.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center opacity-0 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-forwards" style={{ animationDelay: '300ms' }}>
+              isLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                </div>
+              ) : shlokas.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-forwards">
                   <div className="rounded-full bg-primary/10 p-6 mb-4">
                     <BookOpen className="h-10 w-10 text-primary" />
                   </div>

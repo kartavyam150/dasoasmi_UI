@@ -1,39 +1,50 @@
+import { ref, get, set, push, remove } from "firebase/database";
+import { db } from "./firebase";
 import type { Shloka } from "../types";
 
-const STORAGE_KEY = "dasoasmi_shlokas";
+const SHLOKAS_PATH = "shlokas";
 
-export const getShlokas = (): Shloka[] => {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
-        return JSON.parse(data);
-    }
+export const getShlokas = async (): Promise<Shloka[]> => {
+    try {
+        const shlokasRef = ref(db, SHLOKAS_PATH);
+        const snapshot = await get(shlokasRef);
 
-    // Default sample data provided by user
-    const defaultData: Shloka[] = [
-        {
-            id: "sample-1",
-            text: "तस्माद्भारत सर्वात्मा भगवानिश्वरो हरिः ।\nश्रोतव्यः कीर्तितव्यश्च स्मर्तव्यश्चेच्छताभयम् ॥ 5 ॥",
-            translation: "Therefore, O descendant of Bharata, he who desires fearlessness should hear about, glorify and remember the Personality of Godhead, the Supreme Controller, Hari.",
-            comment: "शुकदेव गोस्वामी ने आगे कहा: हे राजा परीक्षित, तब भगवान ब्रह्मा ने पास में हाथ जोड़कर खड़े प्रह्लाद महाराज के समक्ष परमेश्वर से बात करना शुरू किया।",
-            source: "ŚB 8.22.18",
-            author: "श्रीशुक उवाच",
-            date: "2025-12-16T00:00:00.000Z" // 16/12/2025
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            // Convert Firebase object to array and ensure ID is present
+            return Object.entries(data).map(([id, value]) => ({
+                ...(value as any),
+                id
+            })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         }
-    ];
 
-    // Save default so it persists
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
-    return defaultData;
+        // Return empty if no data in Firebase
+        return [];
+    } catch (error) {
+        console.error("Error fetching shlokas from Firebase:", error);
+        return [];
+    }
 };
 
-export const addShloka = (shloka: Shloka): void => {
-    const current = getShlokas();
-    const updated = [shloka, ...current];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+export const addShloka = async (shloka: Shloka): Promise<void> => {
+    try {
+        const shlokasRef = ref(db, SHLOKAS_PATH);
+        const newShlokaRef = push(shlokasRef);
+        // We use the push key as the id, or keep the existing id if provided
+        const finalShloka = { ...shloka, id: newShlokaRef.key || shloka.id };
+        await set(newShlokaRef, finalShloka);
+    } catch (error) {
+        console.error("Error adding shloka to Firebase:", error);
+        throw error;
+    }
 };
 
-export const deleteShloka = (id: string): void => {
-    const current = getShlokas();
-    const updated = current.filter((s) => s.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+export const deleteShloka = async (id: string): Promise<void> => {
+    try {
+        const shlokaRef = ref(db, `${SHLOKAS_PATH}/${id}`);
+        await remove(shlokaRef);
+    } catch (error) {
+        console.error("Error deleting shloka from Firebase:", error);
+        throw error;
+    }
 };
