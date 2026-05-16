@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Users, Library, ScrollText, ChevronRight } from 'lucide-react';
+import { ArrowLeft, BookOpen, Users, Library, ChevronRight } from 'lucide-react';
 import { Button } from './ui/Button';
 import type { Shloka } from '../types';
 
