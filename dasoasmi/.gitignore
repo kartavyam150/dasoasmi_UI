@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (contains API keys and secrets)
+.env
+.env.*
+
+# Playwright test output
+.playwright-mcp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

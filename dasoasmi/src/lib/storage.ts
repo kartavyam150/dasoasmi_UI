@@ -1,4 +1,4 @@
-import { ref, get, set, push, remove } from "firebase/database";
+import { ref, get, set, push, remove, update } from "firebase/database";
 import { db } from "./firebase";
 import type { Shloka } from "../types";
 
@@ -35,6 +35,16 @@ export const addShloka = async (shloka: Shloka): Promise<void> => {
         await set(newShlokaRef, finalShloka);
     } catch (error) {
         console.error("Error adding shloka to Firebase:", error);
+        throw error;
+    }
+};
+
+export const updateShloka = async (shloka: Shloka): Promise<void> => {
+    try {
+        const shlokaRef = ref(db, `${SHLOKAS_PATH}/${shloka.id}`);
+        await update(shlokaRef, shloka);
+    } catch (error) {
+        console.error("Error updating shloka in Firebase:", error);
         throw error;
     }
 };

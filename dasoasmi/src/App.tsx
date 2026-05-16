@@ -7,9 +7,15 @@ import { SplashScreen } from './components/SplashScreen';
 import { ShlokaCard } from './components/ShlokaCard';
 import { AddShloka } from './components/AddShloka';
 import { About } from './components/About';
+import { Stats } from './components/Stats';
+import { NotFound } from './components/NotFound';
+import { PinGate } from './components/PinGate';
+import { PinModal } from './components/PinModal';
 import { Button } from './components/ui/Button';
-import { Plus, BookOpen } from 'lucide-react';
-import { getShlokas, addShloka } from './lib/storage';
+import { BookOpen, Lock, Search, X, BarChart2 } from 'lucide-react';
+import { getShlokas, addShloka, updateShloka, deleteShloka } from './lib/storage';
+import { AdminProvider, useAdmin } from './context/AdminContext';
+import { cn } from './lib/utils';
 import type { Shloka } from './types';
 
 function AppContent() {
@@ -18,6 +24,8 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin, openPinModal, failedAttempts } = useAdmin();
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     const fetchShlokas = async () => {
@@ -55,13 +63,37 @@ function AppContent() {
       navigate('/');
     } catch (error) {
       console.error("Failed to add shloka:", error);
-      throw error; // Re-throw to allow AddShloka component to handle it
+      throw error;
     }
   };
+
+  const handleEditShloka = async (updated: Shloka) => {
+    await updateShloka(updated);
+    setShlokas((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+  };
+
+  const handleDeleteShloka = async (id: string) => {
+    await deleteShloka(id);
+    setShlokas((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const filteredShlokas = query.trim()
+    ? shlokas.filter((s) => {
+        const q = query.toLowerCase();
+        return (
+          (s.shloka ?? '').toLowerCase().includes(q) ||
+          (s.meaning ?? '').toLowerCase().includes(q) ||
+          (s.source ?? '').toLowerCase().includes(q) ||
+          (s.uvaca ?? '').toLowerCase().includes(q) ||
+          (s.comment ?? '').toLowerCase().includes(q)
+        );
+      })
+    : shlokas;
 
   return (
     <>
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+      <PinModal />
 
       <div className="min-h-screen bg-background text-foreground transition-all duration-1000">
         <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
@@ -78,20 +110,32 @@ function AppContent() {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => navigate('/stats')}
+                className={location.pathname === '/stats' ? 'bg-primary/10 text-primary' : ''}
+              >
+                <BarChart2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => navigate('/about')}
                 className={location.pathname === '/about' ? 'bg-primary/10 text-primary' : ''}
               >
                 About
               </Button>
-              {location.pathname === '/' && (
-                <Button
-                  onClick={() => navigate('/add')}
-                  variant="default"
-                  size="sm"
-                  className="gap-2"
+              {failedAttempts < 2 && (
+                <button
+                  onClick={openPinModal}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors",
+                    isAdmin
+                      ? "text-primary bg-primary/10"
+                      : "text-muted-foreground/40 hover:text-muted-foreground"
+                  )}
+                  title="Admin"
                 >
-                  <Plus className="h-4 w-4" /> Add Shloka
-                </Button>
+                  <Lock className="h-4 w-4" />
+                </button>
               )}
             </nav>
           </div>
@@ -113,22 +157,54 @@ function AppContent() {
                   <p className="text-muted-foreground max-w-sm mb-6">
                     Start your collection of wisdom by adding your first shloka.
                   </p>
-                  <Button onClick={() => navigate('/add')}>
-                    Add Your First Shloka
-                  </Button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-10 max-w-4xl mx-auto">
-                  {shlokas.map((shloka) => (
-                    <ShlokaCard key={shloka.id} shloka={shloka} />
-                  ))}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search shlokas, meaning, source…"
+                      className="w-full rounded-xl border border-border bg-background/80 backdrop-blur-sm pl-9 pr-9 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
+                    />
+                    {query && (
+                      <button
+                        onClick={() => setQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {filteredShlokas.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-300">
+                      <Search className="h-8 w-8 text-muted-foreground/40 mb-3" />
+                      <p className="text-muted-foreground">No shlokas found for "<span className="text-foreground">{query}</span>"</p>
+                    </div>
+                  ) : (
+                    filteredShlokas.map((shloka) => (
+                      <ShlokaCard
+                        key={shloka.id}
+                        shloka={shloka}
+                        onEdit={handleEditShloka}
+                        onDelete={handleDeleteShloka}
+                      />
+                    ))
+                  )}
                 </div>
               )
             } />
-            <Route path="/add" element={
-              <AddShloka onSave={handleAddShloka} onCancel={() => navigate('/')} />
+            <Route path="/dasoasmi-admin" element={
+              <PinGate>
+                <AddShloka onSave={handleAddShloka} onCancel={() => navigate('/')} />
+              </PinGate>
             } />
+            <Route path="/stats" element={<Stats shlokas={shlokas} />} />
             <Route path="/about" element={<About />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
       </div>
@@ -138,9 +214,11 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <AdminProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </AdminProvider>
   );
 }
 
